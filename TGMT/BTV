@@ -1,0 +1,55 @@
+import cv2
+
+# Đọc ảnh màu từ đường dẫn
+image = cv2.imread(r'D:\TGMT\cho_meo.jfif')
+height, width, channels = image.shape
+
+print(f"Chiều rộng: {width}")
+print(f"Chiều cao: {height}")
+print(f"Số kênh màu: {channels}")
+
+# Chuyển ảnh sang đen trắng (ảnh xám)
+gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+# Chuyển ảnh xám sang ảnh đen trắng (binary)
+_, binary_image = cv2.threshold(gray_image, 127, 255, cv2.THRESH_BINARY)
+
+# Tách các kênh màu B, G, R
+B, G, R = cv2.split(image)
+
+# Tạo ảnh chỉ hiển thị kênh màu đỏ
+R_image = cv2.merge([B * 0, G * 0, R])
+
+# Tạo ảnh chỉ hiển thị kênh màu xanh lá
+G_image = cv2.merge([B * 0, G, R * 0])
+
+# Tạo ảnh chỉ hiển thị kênh màu xanh dương
+B_image = cv2.merge([B, G * 0, R * 0])
+
+# Chuyển ảnh đen trắng và binary sang 3 kênh để ghép
+gray_image_3_channel = cv2.cvtColor(gray_image, cv2.COLOR_GRAY2BGR)
+binary_image_3_channel = cv2.cvtColor(binary_image, cv2.COLOR_GRAY2BGR)
+
+# Đảm bảo tất cả các ảnh có cùng chiều cao
+gray_image_3_channel = cv2.resize(gray_image_3_channel, (width, height))
+binary_image_3_channel = cv2.resize(binary_image_3_channel, (width, height))
+R_image = cv2.resize(R_image, (width, height))
+G_image = cv2.resize(G_image, (width, height))
+B_image = cv2.resize(B_image, (width, height))
+
+# Nối các ảnh theo chiều ngang
+top_row = cv2.hconcat([image, gray_image_3_channel, binary_image_3_channel])
+bottom_row = cv2.hconcat([R_image, G_image, B_image])
+
+# Đảm bảo hai hàng có cùng chiều rộng bằng cách resize
+top_row = cv2.resize(top_row, (bottom_row.shape[1], top_row.shape[0]))
+
+# Nối hai hàng để tạo thành ảnh cuối cùng
+combined_image = cv2.vconcat([top_row, bottom_row])
+
+# Hiển thị ảnh kết hợp
+cv2.imshow('Combined Image', combined_image)
+
+# Đợi phím bất kỳ để đóng cửa sổ
+cv2.waitKey(0)
+cv2.destroyAllWindows()
