@@ -1,0 +1,18 @@
+import cv2
+import numpy as np
+from matplotlib import pyplot as plt
+img = cv2.imread('D:/THUCHANH/xu_ly_gauss.png')
+img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+# Sử dụng GaussianBlur để làm mờ ảnh
+blurred_img = cv2.GaussianBlur(img_rgb, (15, 15), 0)
+# Hiển thị ảnh gốc và ảnh sau khi làm mờ
+plt.subplot(1, 2, 1)
+plt.imshow(img_rgb)
+plt.title('ANH GOC')
+
+plt.subplot(1, 2, 2)
+plt.imshow(blurred_img)
+plt.title('Xu ly Gaussian')
+
+# Hiển thị toàn bộ
+plt.show()
