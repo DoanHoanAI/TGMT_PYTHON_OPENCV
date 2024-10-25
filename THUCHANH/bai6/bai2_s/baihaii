@@ -1,0 +1,43 @@
+import cv2
+import numpy as np
+
+# Đọc ảnh
+image_path = 'D:/TGMT/bai6/bai2_s/asad.jpg'  # Đường dẫn đến bức ảnh của bạn
+image = cv2.imread(image_path)
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+# Áp dụng bộ lọc Gaussian để làm mượt ảnh
+gray_blurred = cv2.GaussianBlur(gray, (15, 15), 0)  # Kích thước lớn hơn
+
+# Phát hiện viền bằng Canny
+edges = cv2.Canny(gray_blurred, threshold1=50, threshold2=150)  # Tinh chỉnh ngưỡng
+
+# Phát hiện hình tròn bằng HoughCircles
+circles = cv2.HoughCircles(
+    edges,  # Sử dụng viền phát hiện được
+    cv2.HOUGH_GRADIENT,
+    dp=1,
+    minDist=20,
+    param1=50,
+    param2=30,  # Tăng giá trị này để giảm số lượng hình tròn phát hiện
+    minRadius=10,  # Thay đổi giá trị này để loại bỏ hình tròn quá nhỏ
+    maxRadius=100  # Thay đổi giá trị này để loại bỏ hình tròn quá lớn
+)
+
+# Vẽ hình tròn và tâm
+if circles is not None:
+    circles = np.uint16(np.around(circles))  # Làm tròn các giá trị
+    for circle in circles[0, :]:
+        center = (circle[0], circle[1])  # Tâm hình tròn
+        radius = circle[2]  # Bán kính hình tròn
+
+        # Vẽ tâm hình tròn
+        cv2.circle(image, center, 3, (0, 255, 0), -1)  # Màu xanh lá cho tâm
+
+        # Vẽ đường viền hình tròn
+        cv2.circle(image, center, radius, (255, 0, 0), 2)  # Màu đỏ cho đường viền
+
+# Hiển thị ảnh kết quả
+cv2.imshow('Detected Circles', image)
+cv2.waitKey(0)
+cv2.destroyAllWindows()

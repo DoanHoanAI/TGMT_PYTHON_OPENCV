@@ -1,0 +1,125 @@
+import cv2
+import numpy as np
+import time
+
+# Hàm tính năng năng lượng của bức ảnh
+def energy_function(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gradient_x = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
+    gradient_y = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
+    energy = np.abs(gradient_x) + np.abs(gradient_y)
+    return energy
+
+# Hàm loại bỏ seam
+def remove_seam(img, energy_map, seams):
+    rows, cols = energy_map.shape
+    mask = np.ones((rows, cols), dtype=np.bool_)
+    seam = np.argmin(energy_map[-1])
+
+    seam_positions = []
+    for i in reversed(range(rows)):
+        mask[i, seam] = False
+        seam_positions.append((i, seam))
+
+        if i > 0:
+            left_bound = max(0, seam - 1)
+            right_bound = min(cols, seam + 2)
+            if left_bound < right_bound:
+                seam_offset = np.argmin(energy_map[i - 1, left_bound:right_bound])
+                seam = left_bound + seam_offset
+
+    seams.append(seam_positions)
+    img = img[mask].reshape((rows, cols - 1, 3))
+    return img
+
+# Hàm vẽ seam lên ảnh
+def draw_seams(img, seams):
+    img_seam = img.copy()
+    for seam in seams:
+        for (i, j) in seam:
+            img_seam[i, j] = [0, 0, 255]
+    return img_seam
+
+# Hàm ghép hiển thị ảnh
+def ghep_hien_thi_anh(anh_goc, anh_sau_khi_xoa_doc, anh_sau_khi_xoa_ngang):
+    # Lấy kích thước của các bức ảnh
+    cao_goc, rong_goc = anh_goc.shape[:2]
+    cao_sau_khi_xoa_doc, rong_sau_khi_xoa_doc = anh_sau_khi_xoa_doc.shape[:2]
+    cao_sau_khi_xoa_ngang, rong_sau_khi_xoa_ngang = anh_sau_khi_xoa_ngang.shape[:2]
+
+    # Tính chiều cao tối đa và chiều rộng tổng
+    max_cao = max(cao_goc, cao_sau_khi_xoa_doc, cao_sau_khi_xoa_ngang)
+    tong_rong = rong_goc + rong_sau_khi_xoa_doc + rong_sau_khi_xoa_ngang
+
+    # Tạo canvas với màu trắng
+    canvas = np.ones((max_cao, tong_rong, 3), dtype=np.uint8) * 255  # Khung trắng
+
+    # Chèn từng bức ảnh vào canvas
+    canvas[:cao_goc, :rong_goc] = anh_goc
+    canvas[:cao_sau_khi_xoa_doc, rong_goc:rong_goc + rong_sau_khi_xoa_doc] = anh_sau_khi_xoa_doc
+    canvas[:cao_sau_khi_xoa_ngang, rong_goc + rong_sau_khi_xoa_doc:] = anh_sau_khi_xoa_ngang
+
+    # Hiển thị canvas
+    cv2.imshow('avb', canvas)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+# Đường dẫn ảnh
+img_path = 'D:/TGMT/bai6/bai1_s/bty2.jpg'
+
+# Đọc ảnh
+img = cv2.imread(img_path)
+if img is None:
+    print(f"Không thể đọc được ảnh từ {img_path}. Kiểm tra lại đường dẫn!")
+else:
+    print("Đã đọc ảnh thành công!")
+    img_resized = img.copy()  # Lưu ảnh ban đầu
+
+    vertical_seams = []
+    horizontal_seams = []
+
+    # Xóa 50 pixel dọc
+    for _ in range(50):
+        energy_map = energy_function(img_resized)
+        img_resized = remove_seam(img_resized, energy_map, vertical_seams)
+
+    # Lưu ảnh sau khi xóa pixel dọc
+    cv2.imwrite('D:/TGMT/bai6/anh_sau_khi_xoa_50_pixel_doc.jpg', img_resized)
+
+    # Xóa 50 pixel ngang (xoay ảnh rồi xóa, sau đó xoay lại)
+    img_resized = np.rot90(img_resized, 1)
+    for _ in range(50):
+        energy_map = energy_function(img_resized)
+        img_resized = remove_seam(img_resized, energy_map, horizontal_seams)
+    img_resized = np.rot90(img_resized, -1)
+
+    # Lưu ảnh sau khi xóa pixel ngang
+    cv2.imwrite('D:/TGMT/bai6/anh_sau_khi_xoa_50_pixel_ngang.jpg', img_resized)
+
+    # Vẽ các seam lên ảnh gốc
+    img_with_seams = draw_seams(img, vertical_seams)
+    img_with_seams = np.rot90(img_with_seams, 1)
+    img_with_seams = draw_seams(img_with_seams, horizontal_seams)
+    img_with_seams = np.rot90(img_with_seams, -1)
+
+    # Lưu ảnh với các seam
+    output_path = 'D:/TGMT/bai6/anh_seam_carving_va_hien_thi.jpg'
+    cv2.imwrite(output_path, img_with_seams)
+    print(f"Đã lưu ảnh với đường năng lượng tại: {output_path}")
+
+    # Ghép và hiển thị 3 bức ảnh
+    ghep_hien_thi_anh(img, img_resized, img_with_seams)
+
+    # =========================== So sánh với phương pháp Resize truyền thống ===========================
+
+    # Resize truyền thống
+    start_time = time.time()
+    resized_image = cv2.resize(img, (526, 670))  # Resize về kích thước mới
+    cv2.imwrite('D:/TGMT/bai6/anh_resize_truyen_thong.jpg', resized_image)
+    print("Thời gian resize truyền thống:", time.time() - start_time)
+
+    # Thời gian seam carving đã tính ở trên
+    print("Thời gian seam carving:", time.time() - start_time)
+
+    # Ghép và hiển thị ảnh sau resize truyền thống
+    ghep_hien_thi_anh(img, resized_image, img_with_seams)
