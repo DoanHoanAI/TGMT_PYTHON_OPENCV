@@ -1,0 +1,67 @@
+import cv2
+import numpy as np
+
+# Hàm để cập nhật ảnh khi thay đổi thanh điều chỉnh
+def update(val):
+    # Đọc ảnh gốc và chuyển sang ảnh xám
+    anh = cv2.imread("D:/TGMT/bai7/dfg.jpg")
+    anh_xam = cv2.cvtColor(anh, cv2.COLOR_BGR2GRAY)
+
+    # Lấy giá trị từ các thanh điều chỉnh
+    min_dist = cv2.getTrackbarPos('Min Dist', 'Hough Circles')
+    param1 = cv2.getTrackbarPos('Param1', 'Hough Circles')
+    param2 = cv2.getTrackbarPos('Param2', 'Hough Circles')
+    min_radius = cv2.getTrackbarPos('Min Radius', 'Hough Circles')
+    max_radius = cv2.getTrackbarPos('Max Radius', 'Hough Circles')
+
+    # Phát hiện các đường tròn
+    duong_tron = cv2.HoughCircles(
+        anh_xam,
+        cv2.HOUGH_GRADIENT,
+        dp=1,
+        minDist=min_dist,
+        param1=param1,
+        param2=param2,
+        minRadius=min_radius,
+        maxRadius=max_radius
+    )
+
+    # Vẽ các đường tròn và hiển thị đường kính
+    anh_ket_qua = anh.copy()
+    if duong_tron is not None:
+        duong_tron = np.round(duong_tron[0, :]).astype("int")
+        for (x, y, ban_kinh) in duong_tron:
+            duong_kinh = 2 * ban_kinh
+            print(f"Đường kính hình tròn: {duong_kinh} pixels")
+            cv2.circle(anh_ket_qua, (x, y), ban_kinh, (255, 0, 0), 2)
+            cv2.circle(anh_ket_qua, (x, y), 2, (0, 255, 0), 3)
+            # Đánh dấu bán kính
+            cv2.line(anh_ket_qua, (x, y), (x + ban_kinh, y), (0, 255, 255), 2)
+            cv2.putText(anh_ket_qua, f"R: {ban_kinh} px", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 1)
+
+    # Hiển thị ảnh kết quả
+    cv2.imshow('Hough Circles', anh_ket_qua)
+
+# Tạo cửa sổ để hiển thị ảnh
+cv2.namedWindow('Hough Circles')
+
+# Tạo các thanh điều chỉnh
+cv2.createTrackbar('Min Dist', 'Hough Circles', 30, 200, update)
+cv2.createTrackbar('Param1', 'Hough Circles', 50, 300, update)
+cv2.createTrackbar('Param2', 'Hough Circles', 30, 100, update)
+cv2.createTrackbar('Min Radius', 'Hough Circles', 10, 100, update)
+cv2.createTrackbar('Max Radius', 'Hough Circles', 50, 100, update)
+
+# Gọi hàm update lần đầu để hiển thị ảnh ban đầu
+update(0)
+
+# Đợi cho đến khi người dùng nhấn phím 'q' để thoát hoặc 's' để lưu ảnh
+while True:
+    key = cv2.waitKey(1)
+    if key & 0xFF == ord('q'):  # Nhấn 'q' để thoát
+        break
+    elif key & 0xFF == ord('s'):  # Nhấn 's' để lưu ảnh
+        cv2.imwrite("ket_qua_hinh_tron.jpg", anh)
+
+# Đóng tất cả cửa sổ
+cv2.destroyAllWindows()

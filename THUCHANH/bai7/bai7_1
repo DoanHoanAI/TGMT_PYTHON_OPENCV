@@ -1,0 +1,68 @@
+import cv2
+import numpy as np
+
+# Khai báo biến toàn cục để sử dụng bên ngoài hàm update
+anh_ket_qua = None
+
+# Hàm để cập nhật ảnh khi thay đổi thanh điều chỉnh
+def update(val):
+    global anh_ket_qua  # Sử dụng biến toàn cục
+    # Đọc ảnh gốc và chuyển sang ảnh xám
+    anh = cv2.imread("D:/TGMT/bai7/drf.jpeg")
+    anh_xam = cv2.cvtColor(anh, cv2.COLOR_BGR2GRAY)
+
+    # Lấy giá trị từ các thanh điều chỉnh
+    threshold1 = cv2.getTrackbarPos('Threshold1', 'Hough Lines')
+    threshold2 = cv2.getTrackbarPos('Threshold2', 'Hough Lines')
+    min_length = cv2.getTrackbarPos('Min Line Length', 'Hough Lines')
+    max_gap = cv2.getTrackbarPos('Max Line Gap', 'Hough Lines')
+
+    # Phát hiện các cạnh bằng bộ lọc Canny
+    canh = cv2.Canny(anh_xam, threshold1, threshold2, apertureSize=3)
+
+    # Hiển thị ảnh Canny
+    cv2.imshow('Canny Edge', canh)
+
+    # Phát hiện các đoạn đường thẳng
+    duong_thang = cv2.HoughLinesP(canh, rho=1, theta=np.pi/180, threshold=100, minLineLength=min_length, maxLineGap=max_gap)
+
+    # Vẽ các đoạn thẳng và hiển thị độ dài
+    anh_ket_qua = anh.copy()
+    if duong_thang is not None:
+        for duong in duong_thang:
+            x1, y1, x2, y2 = duong[0]
+            chieu_dai = int(np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2))
+            # In độ dài đoạn thẳng ra ảnh
+            cv2.line(anh_ket_qua, (x1, y1), (x2, y2), (0, 255, 0), 2)
+            cv2.putText(anh_ket_qua, f"{chieu_dai}px", ((x1 + x2) // 2, (y1 + y2) // 2), 
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1, cv2.LINE_AA)
+            print(f"Độ dài đoạn thẳng: {chieu_dai} pixels")
+
+    # Hiển thị ảnh kết quả với đường thẳng
+    cv2.imshow('Hough Lines', anh_ket_qua)
+
+# Tạo cửa sổ để hiển thị ảnh
+cv2.namedWindow('Hough Lines')
+cv2.namedWindow('Canny Edge')
+
+# Tạo các thanh điều chỉnh
+cv2.createTrackbar('Threshold1', 'Hough Lines', 50, 255, update)
+cv2.createTrackbar('Threshold2', 'Hough Lines', 150, 255, update)
+cv2.createTrackbar('Min Line Length', 'Hough Lines', 50, 500, update)
+cv2.createTrackbar('Max Line Gap', 'Hough Lines', 10, 100, update)
+
+# Gọi hàm update lần đầu để hiển thị ảnh ban đầu
+update(0)
+
+# Đợi cho đến khi người dùng nhấn phím 'q' để thoát hoặc 's' để lưu ảnh
+while True:
+    key = cv2.waitKey(1)
+    if key & 0xFF == ord('q'):  # Nhấn 'q' để thoát
+        break
+    elif key & 0xFF == ord('s'):  # Nhấn 's' để lưu ảnh kết quả với đoạn thẳng và độ dài
+        if anh_ket_qua is not None:
+            cv2.imwrite("ket_qua_duong_thang.jpg", anh_ket_qua)
+            print("Đã lưu ảnh kết quả với các đoạn thẳng và độ dài tại 'ket_qua_duong_thang.jpg'.")
+
+# Đóng tất cả cửa sổ
+cv2.destroyAllWindows()

@@ -1,0 +1,76 @@
+import cv2
+import numpy as np
+
+# Thong so tieu cu va kich thuoc vat that
+tieu_cach = 700  # vi du tieu cu (can calibrate)
+duong_kinh_thuc = 5  # duong kinh that cua vat (cm)
+
+# Ham goi lai de thay doi gia tri bo loc GaussianBlur
+def cap_nhat_lam_mem(val):
+    global kich_thuoc_lam_mem
+    kich_thuoc_lam_mem = max(3, val | 1)
+
+# Ham goi lai de thay doi thong so HoughCircles
+def cap_nhat_hough(param):
+    pass  # Ham nay khong can thuc hien gi
+
+# Khoi tao kich thuoc bo loc mac dinh
+kich_thuoc_lam_mem = 9
+
+# Tao cua so va thanh truot cho kich thuoc GaussianBlur
+cv2.namedWindow("Khung hinh")
+cv2.createTrackbar("Kich thuoc Lam Mem", "Khung hinh", kich_thuoc_lam_mem, 20, cap_nhat_lam_mem)
+
+# Tao thanh truot cho thong so HoughCircles
+cv2.createTrackbar("dp", "Khung hinh", 1, 10, cap_nhat_hough)
+cv2.createTrackbar("Khoang Cach Toi Thieu", "Khung hinh", 50, 200, cap_nhat_hough)
+cv2.createTrackbar("Tham So 1", "Khung hinh", 100, 300, cap_nhat_hough)
+cv2.createTrackbar("Tham So 2", "Khung hinh", 30, 100, cap_nhat_hough)
+cv2.createTrackbar("Ban Kinh Toi Thieu", "Khung hinh", 10, 100, cap_nhat_hough)
+cv2.createTrackbar("Ban Kinh Toi da", "Khung hinh", 100, 200, cap_nhat_hough)
+
+# Mo camera
+cap = cv2.VideoCapture(1)
+
+while cap.isOpened():
+    ret, frame = cap.read()
+    if not ret:
+        break
+
+    # Chuyen anh sang mau xam
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # Ap dung GaussianBlur voi kich thuoc tu thanh truot
+    gray = cv2.GaussianBlur(gray, (kich_thuoc_lam_mem, kich_thuoc_lam_mem), 2)
+
+    # Lay gia tri tu thanh truot cho HoughCircles
+    dp = cv2.getTrackbarPos("dp", "Khung hinh")
+    min_dist = cv2.getTrackbarPos("Khoang Cach Toi Thieu", "Khung hinh")
+    param1 = cv2.getTrackbarPos("Tham So 1", "Khung hinh")
+    param2 = cv2.getTrackbarPos("Tham So 2", "Khung hinh")
+    min_radius = cv2.getTrackbarPos("Ban Kinh Toi Thieu", "Khung hinh")
+    max_radius = cv2.getTrackbarPos("Ban Kinh Toi da", "Khung hinh")
+
+    # Tim cac hinh tron trong anh
+    circles = cv2.HoughCircles(gray, cv2.HOUGH_GRADIENT, dp=dp/10, minDist=min_dist, param1=param1, param2=param2, minRadius=min_radius, maxRadius=max_radius)
+
+    if circles is not None:
+        circles = np.round(circles[0, :]).astype("int")
+        
+        for (x, y, r) in circles:
+            # Tinh khoang cach tu camera den hinh tron
+            duong_kinh_hinh_tron = 2 * r
+            khoang_cach = (tieu_cach * duong_kinh_thuc) / duong_kinh_hinh_tron
+
+            # Ve hinh tron va hien thi khoang cach
+            cv2.circle(frame, (x, y), r, (0, 255, 0), 4)  # Ve duong tron
+            cv2.circle(frame, (x, y), 5, (255, 0, 0), -1)  # Ve tam hinh tron
+            cv2.putText(frame, f"Khoang cach: {khoang_cach:.2f} cm", (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
+    # Hien thi khung hinh
+    cv2.imshow("Khung hinh", frame)
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        break
+
+cap.release()
+cv2.destroyAllWindows()
